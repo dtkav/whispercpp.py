@@ -74,6 +74,7 @@ cdef whisper_full_params default_params() nogil:
     )
     params.print_realtime = True
     params.print_progress = True
+    params.print_timestamps = True
     params.translate = False
     params.language = <const char *> LANGUAGE
     n_threads = N_THREADS
@@ -127,5 +128,25 @@ cdef class Whisper:
         return [
             whisper_full_get_segment_text(self.ctx, i).decode() for i in range(n_segments)
         ]
+
+    def get_probs(self, int res):
+        if res != 0:
+            raise RuntimeError
+        cdef int n_segments = whisper_full_n_segments(self.ctx)
+        segments = []
+        for i_segment in range(0, n_segments):
+            tokens = []
+
+            t0 = whisper_full_get_segment_t0(self.ctx, i_segment);
+            t1 = whisper_full_get_segment_t1(self.ctx, i_segment);
+
+            n_tokens = whisper_full_n_tokens(self.ctx, i_segment)
+            for i_token in range(0, n_tokens):
+                token_text = whisper_full_get_token_text(self.ctx, i_segment, i_token).decode()
+                token_p = whisper_full_get_token_p(self.ctx, i_segment, i_token)
+                tokens += [(token_text, token_p)]
+
+            segments += [(t0, t1, tokens)]
+        return segments
 
 
